@@ -1,0 +1,56 @@
+
+Users : 
+    email - string
+    userName- string
+    password- string
+    isInvited - boolean
+    isSeller  - boolean
+
+Address : 
+    userId - objectId
+    mobile - string
+    address - string
+    city - string
+    state - string
+    pincode - number
+    type - string['home' ,'work']
+
+
+Products : 
+    sellerId - objectId
+    name - string
+    price - number
+    desc - string
+    category - string
+    image - string
+    stock - number
+    isDeleted - boolean
+
+StocksAt :
+    productId - objectId
+    at - array of object [{'place','stock'}]
+
+Cart : 
+    userId - objectId
+    productId - objectId
+    quantity - number
+    isOrdered - boolean
+
+Orders : 
+    userId - objectId
+    products - array of objects [{'productId' ,'quantity'}]
+    total - number
+    status - ['pandding','delivered']
+    isCanceled - boolean
+
+Reviews :
+    productId - objectId
+    userId - objectId
+    review - string
+    rating - number
+
+Invitaions :
+    sender - string
+    reciver -string
+    role - string
+    status - string ['accept','reject','pendding']
