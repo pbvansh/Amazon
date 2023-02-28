@@ -23,7 +23,7 @@ const verifyJWT = (token, sec) => {
 }
 
 const BcyptPassword = async (password) => {
-    console.log(password);
+    // console.log(password);
     const salt = await Bcypt.genSalt(10);
     return Bcypt.hash(password, salt);
 }

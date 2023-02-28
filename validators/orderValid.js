@@ -35,7 +35,7 @@ const setAddress = async (ctx, next) => {
 const canChange = async (ctx, next) => {
     const orderId = new ObjectId(ctx.request.params.id);
     const count = await Order.countDocuments({ userId: ctx.user._id, isCanceled: false, status: 2, _id: orderId });
-    console.log(count);
+    // console.log(count);
     if (count == 0) {
         sendMsg(ctx, 400, "you can not make chages");
         return;
@@ -82,9 +82,11 @@ const isValidOrder = async (ctx, next) => {
             }
 
             //---------add company id with product
-            product.companyId = prod.companyId;
-            product.status = 2;
-            product.total = (prod.price * product.qnt)
+            Object.assign(product, {
+                companyId: prod.companyId,
+                status: 2,
+                total: (prod.price * product.qnt)
+            })
             //find total
             subTotal += product.total
         }
@@ -110,15 +112,16 @@ const setShippingAddress = async (ctx, next) => {
     // console.log(customerState);
     let error = []
     for (const product of products) {
-        const stocks = await Stock.find({ productId: product.id }).toArray();
-        const haveStock = stocks.some((stock) => {
-            return stock.place === customerState && stock.stock > product.qnt
+        const stocks = await Stock.findOne({ productId: product.id });
+        // console.log(stocks);
+        const haveStock = stocks.stockAt.some((stock) => {
+            return stock.place === customerState && stock.stocks >= product.qnt
         })
         if (haveStock) {
             product.shippingAddress = customerState;
         } else {
-            const availableStock = stocks.find((stock) => {
-                return stock.stock > product.qnt;
+            const availableStock = stocks.stockAt.find((stock) => {
+                return stock.stocks >= product.qnt;
             })
             if (!availableStock) {
                 error.push(`${product.id} is currently unavaileble`)

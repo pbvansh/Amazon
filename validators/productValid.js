@@ -53,7 +53,7 @@ const setSellerId = async (ctx, next) => {
     if (ctx.user.isSeller) {
         sellerId = ctx.user._id;
     }
-    console.log(sellerId);
+    // console.log(sellerId);
     ctx.state.bodyData.sellerId = sellerId;
     await next();
 }
@@ -120,13 +120,32 @@ const filter = async (ctx, next) => {
 }
 
 const isPlaceUniq = async (ctx, next) => {
-    const { place, productId } = ctx.request.body;
-    const stock = await Stock.findOne({ place, productId })
-    if (stock) {
-        sendMsg(ctx, 400, `${place} have already ${stock.stock} stocks. Add different place`);
-        return;
+    const { stockAt, productId } = ctx.request.body;
+    for (const oneStock of stockAt) {
+        console.log(oneStock);
+        // const stock = await Stock.updateOne({ productId, "stockAt.place": oneStock.place },
+        //     { $set: { "stockAt.$.stocks": { { $inc: oneStock.stocks }} } });
+        const isExist = await Stock.countDocuments({ productId, "stockAt.place": oneStock.place })
+
+        if (isExist > 0) {
+            await Stock.updateOne({ productId, "stockAt.place": oneStock.place },
+                {
+                    $inc: { "stockAt.$.stocks": oneStock.stocks }
+                }, {}
+            );
+        } else {
+            await Stock.updateOne({ productId }, {
+                $push: { "stockAt": oneStock }
+            })
+        }
+        console.log(isExist);
+        // if (stock) {
+        //     // sendMsg(ctx, 400, `${place} have already ${stock.stock} stocks. Add different place`);
+        //     return;
+        // }
     }
-    await next()
+
+    // await next()
 }
 
 module.exports = {

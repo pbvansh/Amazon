@@ -187,7 +187,7 @@ const requiredField = async (ctx, next) => {
         fields = ['name', 'price', 'image']
     }
     else if (ctx.url === '/product/stock') {
-        fields = ['productId', 'stock', 'place']
+        fields = ['productId', 'stockAt']
     }
     else if (ctx.url === '/order') {
         fields = ['products', 'total']
@@ -274,9 +274,6 @@ const createState = async (ctx, next) => {
     }
     else if (ctx.url === '/addaddress') {
         fields = ['mobile', 'address', 'city', 'state', 'pincode', 'type']
-    }
-    else if (ctx.url === '/product/stock') {
-        fields = ['productId', 'stock', 'place']
     }
     else if (ctx.url.includes('/product')) {
         fields = ['name', 'price', 'desc', 'category', 'image', 'isDeleted']

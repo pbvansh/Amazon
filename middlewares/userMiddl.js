@@ -82,10 +82,57 @@ const isPartOfCompany = async (ctx, next) => {
         return;
     }
 }
+const userHavePermission = async (ctx, next) => {
+    if (!ctx.user.companyId) {
+        sendMsg(ctx, 400, 'you have no permission');
+        return;
+    } else if (ctx.user._id.toString() === ctx.user.companyId.toString()) {
+        console.log('owner');
+        await next();
+    } else if (ctx.user?.isInvited) {
+        const invitedUser = await Invite.findOne({ reciver: ctx.user.email, status: 1, })
+        console.log(invitedUser);
+        if (!invitedUser) {
+            sendMsg(ctx, 400, 'you have no permission');
+            return;
+        } else if (invitedUser.role === 'admin') {
+            console.log('admin');
+            await next();
+        } else {
+            const route = ctx.url;
+            console.log(route);
+            if (route.includes('/order')) {
+                if (!invitedUser.permission?.manageOrder) {
+                    sendMsg(ctx, 400, 'you have no permission');
+                    return;
+                }
+                await next()
+            }
+            else if (route.includes('/product/stock')) {
+                if (!invitedUser.permission?.manageStock) {
+                    sendMsg(ctx, 400, 'you have no permission');
+                    return;
+                }
+                await next()
+            }
+            else if (route.includes('/product')) {
+                if (!invitedUser.permission?.manageProduct) {
+                    sendMsg(ctx, 400, 'you have no permission');
+                    return;
+                }
+                await next()
+            }
+            sendMsg(ctx, 400, 'you have no permission');
+            return;
+        }
+
+    }
+}
 
 
 module.exports = {
     protect,
     isSeller,
-    isPartOfCompany
+    isPartOfCompany,
+    userHavePermission
 }

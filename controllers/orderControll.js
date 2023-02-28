@@ -77,14 +77,15 @@ const placeOrder = async (ctx) => {
             shippingFrom: product.shippingAddress,
             status: 2,
             address,
-            isCanceled: false
+            isCanceled: false,
+            createdAt: new Date()
         })
         await Stock.updateOne({
             productId: product.id,
-            place: product.shippingAddress
+            "stockAt.place": product.shippingAddress
         }, {
             $inc: {
-                stock: -product.qnt
+                "stockAt.$.stocks": -product.qnt
             }
         })
     }
@@ -93,7 +94,7 @@ const placeOrder = async (ctx) => {
 
 const updateOrder = async (ctx) => {
     const { upData } = ctx.state;
-    console.log(upData);
+    // console.log(upData);
     const orderId = new ObjectId(ctx.request.params.id);
     const res = await Order.updateOne({ _id: orderId, isCanceled: false }, { $set: upData });
     if (res.matchedCount > 0) sendMsg(ctx, 200, 'order updated successfully')
@@ -114,10 +115,10 @@ const canceleOrder = async (ctx) => {
     await Order.updateOne({ _id: orderId, isCanceled: false }, { $set: { isCanceled: true } });
     await Stock.updateOne({
         productId: order.productId,
-        place: order.shippingFrom
+        "stockAt.place": order.shippingFrom
     }, {
         $inc: {
-            stock: order.qnt
+            "stockAt.$.stocks": order.qnt
         }
     })
     sendMsg(ctx, 200, 'order cancled');

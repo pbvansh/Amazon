@@ -17,7 +17,12 @@ const getSellerProducts = async (ctx) => {
                 from: 'stocks',
                 localField: '_id',
                 foreignField: 'productId',
-                as: "stocks"
+                as: "productStocks"
+            }
+        }, {
+            $unwind: {
+                path: "$productStocks",
+                preserveNullAndEmptyArrays: true
             }
         },
         {
@@ -39,7 +44,7 @@ const getSellerProducts = async (ctx) => {
                 totalReviews: {
                     $size: "$review"
                 },
-                stocks: 1,
+                totalStocks: { $sum: "$productStocks.stockAt.stocks" },
             }
         },
         {
@@ -101,6 +106,84 @@ const getAllProducts = async (ctx) => {
     ctx.body = products;
 }
 
+const getSingleProduct = async (ctx) => {
+    console.log('hiii');
+    const { productId } = new ObjectId(ctx.request.params.id);
+    const product = await Product.aggregate([
+        {
+            $match: { productId }
+        },
+        {
+            $lookup: {
+                from: "users",
+                let: { id: "$companyId" },
+                pipeline: [
+                    {
+                        $match: { $expr: { $eq: ["$_id", "$$id"] } }
+                    }, {
+                        $project: {
+                            email: 1,
+                            userName: 1
+                        }
+                    }
+                ],
+                as: "seller"
+            }
+        }, {
+            $unwind: "$seller"
+        },
+        {
+            $lookup: {
+                from: "stocks",
+                localField: "_id",
+                foreignField: "productId",
+                as: "stocks"
+            }
+        },
+        {
+            $unwind: {
+                path: "$stocks",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "reviews",
+                localField: "_id",
+                foreignField: "productId",
+                as: "reviews"
+            }
+        }, {
+            $lookup: {
+                from: "users",
+                let: { reviewArray: "$reviews" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $in: ["$_id", "$$reviewArray.userId"]
+                            }
+                        }
+                    }, {
+                        $addFields: { reviewinfo: { $arrayElemAt: ["$$reviewArray", { $indexOfArray: ["$$reviewArray.userId", "$_id"] }] } }
+                    }, {
+                        $project: { userName: 1, email: 1, review: "$reviewinfo.review", rating: "$reviewinfo.rating" }
+                    }
+                ],
+                as: "userReviews"
+            }
+        },
+        {
+            $project: {
+                // sellerInfo: { $addFields: "$seller" },
+                reviews: 0,
+                "seller.password": 0,
+            }
+        }
+    ]).toArray();
+    ctx.body = product;
+}
+
 const addProduct = async (ctx) => {
     const { bodyData } = ctx.state;
     // console.log(ctx.user);
@@ -115,14 +198,18 @@ const updateProduct = async (ctx) => {
     const { bodyData } = ctx.state;
     bodyData.companyId = ctx.user.companyId;
     // bodyData.isDeleted = false
-    await Product.updateOne({ _id: productId }, { $set: bodyData })
-    sendMsg(ctx, 200, 'Product updated successfully');
+    const updateCount = await Product.updateOne({ _id: productId }, { $set: bodyData })
+    // console.log(updateCount);
+    updateCount.modifiedCount > 0 ? sendMsg(ctx, 200, 'Product updated successfully')
+        : sendMsg(ctx, 400, 'product is not available')
 }
 
 const deleteProduct = async (ctx) => {
     const productId = new ObjectId(ctx.request.params.id)
-    await Product.updateOne({ _id: productId }, { $set: { isDeleted: true } })
-    sendMsg(ctx, 200, 'Product deleted successfully');
+    const deleteCount = await Product.updateOne({ _id: productId }, { $set: { isDeleted: true } })
+    deleteCount.modifiedCount > 0 ? sendMsg(ctx, 200, 'Product deleted successfully')
+        : sendMsg(ctx, 400, 'product is not available')
+
 }
 
 const addReviews = async (ctx) => {
@@ -173,17 +260,38 @@ const getProductReview = async (ctx) => {
 }
 
 const addStock = async (ctx) => {
-    const { bodyData } = ctx.state;
-    await Stock.insertOne(bodyData);
+    const { stockAt, productId } = ctx.request.body;
+    for (const oneStock of stockAt) {
+        const isExist = await Stock.countDocuments({ productId, "stockAt.place": oneStock.place })
+        if (isExist > 0) {
+            await Stock.updateOne({ productId, "stockAt.place": oneStock.place },
+                {
+                    $inc: { "stockAt.$.stocks": oneStock.stocks }
+                }
+            );
+        } else {
+            await Stock.updateOne({ productId }, {
+                $push: { "stockAt": oneStock }
+            }, { upsert: true })
+        }
+    }
     sendMsg(ctx, 201, 'stock added successfully')
 }
 
 const getStock = async (ctx) => {
     try {
         const { id } = ctx.request.params;
-        const stocks = await Stock.find({
-            productId: new ObjectId(id)
-        }).toArray();
+        const stocks = await Stock.aggregate([
+            {
+                $match: {
+                    productId: new ObjectId(id)
+                }
+            },
+            {
+                $addFields: { totalStocks: { $sum: "$stockAt.stocks" } }
+            }
+        ]).toArray()
+        // console.log(stocks);
         ctx.body = stocks;
     } catch (error) {
         sendMsg(ctx, 400, 'invalid product id');
@@ -194,6 +302,7 @@ const getStock = async (ctx) => {
 module.exports = {
     getSellerProducts,
     getAllProducts,
+    getSingleProduct,
     addProduct,
     updateProduct,
     deleteProduct,

@@ -2,7 +2,7 @@ const { client } = require('../database/db');
 const Stock = client.db('test').collection('stocks');
 
 const getStock = async (productId) => {
-    console.log(productId);
+    // console.log(productId);
     const totalStock = await Stock.aggregate([
         {
             $match: {
@@ -10,14 +10,14 @@ const getStock = async (productId) => {
             }
         },
         {
-            $group: {
-                _id: "$productId",
+            $addFields: {
                 stocks: {
-                    $sum: "$stock"
+                    $sum: "$stockAt.stocks"
                 }
             }
         }
     ]).toArray();
+    // console.log(totalStock[0]);
     if (totalStock.length > 0) return totalStock[0].stocks;
     else return 0;
 }

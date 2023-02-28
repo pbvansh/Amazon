@@ -1,13 +1,11 @@
 
-const { BcyptPassword, createJWT, verifyJWT } = require('../utils/jwt');
+const { BcyptPassword, createJWT } = require('../utils/jwt');
 const Bcypt = require('bcryptjs')
 const { sendMsg } = require('../utils/msg');
 const { client } = require('../database/db');
 const { ObjectId } = require('mongodb');
 const User = client.db('test').collection('users')
 const Invite = client.db('test').collection('invitation')
-
-
 
 const signup = async (ctx) => {
     const { isInvited, email: reciver, companyId, isSeller } = ctx.request.body;
@@ -39,7 +37,7 @@ const login = async (ctx) => {
                 userName: user.userName,
                 passwordModifyAt: user?.passwordModifyAt
             }
-            console.log(data);
+            // console.log(data);
             ctx.body = {
                 status: 200,
                 msg: 'login successfully',
@@ -58,14 +56,16 @@ const login = async (ctx) => {
 
 
 const inviteTeamMember = async (ctx) => {
-    const { role, email } = ctx.request.body;
-    const invitationId = await Invite.insertOne({
+    const { role, email, permission } = ctx.request.body;
+    const data = {
         companyId: ctx.user.companyId,
         sender: ctx.user.email,
         reciver: email,
         role,
         status: 2
-    })
+    }
+    permission ? data.permission = permission : null;
+    const invitationId = await Invite.insertOne(data)
     const url = ctx.host + '/user/signup?token=';
     ctx.body = {
         status: 200,
