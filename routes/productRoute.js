@@ -13,7 +13,7 @@ const route = new Router({
 // member -- add,update,read  
 
 route.get('/', filter, getAllProducts)
-route.get('/:id', getSingleProduct)
+route.get('/single/:id', getSingleProduct)
 route.get('/seller', protect, isPartOfCompany, filter, getSellerProducts)
 route.post('/', protect, userHavePermission, requiredField, isUniqProductName, isPrice, isImgUrl, createState, addProduct)
 route.put('/:id', protect, userHavePermission, requiredField, isUniqProductName, isImgUrl, createState, updateProduct)

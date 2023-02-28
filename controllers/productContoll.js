@@ -70,8 +70,16 @@ const getAllProducts = async (ctx) => {
         {
             $lookup: {
                 from: 'users',
-                localField: 'companyId',
-                foreignField: '_id',
+                let: { id: "$companyId" },
+                pipeline: [
+                    {
+                        $match: { $expr: { $eq: ["$_id", "$$id"] } }
+                    }, {
+                        $project: {
+                            userName: 1
+                        }
+                    }
+                ],
                 as: 'company'
             }
         },
@@ -145,7 +153,12 @@ const getSingleProduct = async (ctx) => {
                 path: "$stocks",
                 preserveNullAndEmptyArrays: true
             }
-        },
+        }, 
+        // {
+        //     $project: {
+        //         stocks: "$stocks.stockAt"
+        //     }
+        // },
         {
             $lookup: {
                 from: "reviews",

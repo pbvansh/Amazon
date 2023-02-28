@@ -54,7 +54,6 @@ const login = async (ctx) => {
 
 }
 
-
 const inviteTeamMember = async (ctx) => {
     const { role, email, permission } = ctx.request.body;
     const data = {
